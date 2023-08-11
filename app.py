@@ -67,18 +67,33 @@ def create_contact():
     try:
         # Recuperamos la información del nuevo contacto.
         data = request.get_json()
+        
+        # Creamos variables y recuperamos datos.
+        name = data['name']
+        email = data['email']
+        phone = data['phone']
+        
+        # Validamos que los campos no vengan nulos.
+        if name != None and name != '' and email != None and email != '' and phone != None and phone != '':
+            # Creamos objeto y mandamos la información.
+            contact = Contact(
+                name=name,
+                email=email,
+                phone=phone
+            )
 
-        # Creamos objeto y mandamos la información.
-        contact = Contact(
-            name=data['name'],
-            email=data['email'],
-            phone=data['phone']
-        )
-
-        # Agregamos el nuevo contacto.
-        db.session.add(contact)
-        # Confirmamos los cambios en la base de datos.
-        db.session.commit()
+            # Agregamos el nuevo contacto.
+            db.session.add(contact)
+            # Confirmamos los cambios en la base de datos.
+            db.session.commit()
+        
+        else:
+            # Retornamos mensaje de error.
+            return jsonify(
+                {
+                    'message': 'Asegurate de colocar (name, email, phone) para registrar un nuevo contacto.'
+                }
+            )
 
     except SQLAlchemyError as e:
         # Deshacemos los cambios en caso de error.
