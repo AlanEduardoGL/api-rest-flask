@@ -26,7 +26,21 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///contacts.db"
 db = SQLAlchemy(app)
 
 
+# @audit Class Contact
 class Contact(db.Model):
+    """
+    Clase que define la estructura de la tabla "contact"
+    en la base de datos, sus columnas y tipos de datos, 
+    y proporciona un método para serializar los datos de la tabla. 
+
+    Args:
+        db.Model (_type_): Representa una entidad en la base de datos.
+
+    Returns:
+        Dict: Devuelve un diccionario que contiene los datos de la 
+        instancia actual en un formato serializado.
+        Convierte objetos de la clase "Contact" en formatos JSON.
+    """
     # Colocamos nombre tabla.
     __tablename__ = "contact"
 
@@ -67,26 +81,38 @@ def create_contact():
     try:
         # Recuperamos la información del nuevo contacto.
         data = request.get_json()
-        
+
         # Creamos variables y recuperamos datos.
         name = data['name']
         email = data['email']
         phone = data['phone']
-        
+
         # Validamos que los campos no vengan nulos.
-        if name != None and name != '' and email != None and email != '' and phone != None and phone != '':
-            # Creamos objeto y mandamos la información.
-            contact = Contact(
+        if name and email and phone:
+            # Consulta para buscar si el contacto ya existe.
+            existing_contact = Contact.query.filter_by(
                 name=name,
                 email=email,
                 phone=phone
-            )
+            ).first()
 
-            # Agregamos el nuevo contacto.
-            db.session.add(contact)
-            # Confirmamos los cambios en la base de datos.
-            db.session.commit()
-        
+            # Validamos si existe el contacto a registrar/guardar.
+            if existing_contact:
+                return jsonify(
+                    {
+                        'message': f'El contacto {existing_contact.name} ya se encuentra registrado en tus contactos.'
+                    }
+                )
+
+            else:
+                # Creamos objeto y mandamos la información.
+                contact = Contact(name=name, email=email, phone=phone)
+
+                # Agregamos el nuevo contacto.
+                db.session.add(contact)
+                # Confirmamos los cambios en la base de datos.
+                db.session.commit()
+
         else:
             # Retornamos mensaje de error.
             return jsonify(
@@ -141,7 +167,7 @@ def get_one_contact(id):
                 {
                     'message': f'El usuario solictado no existe. Intenta nuevamente.'
                 }
-            ), 404
+            )
 
     except SQLAlchemyError as e:
         # Retornamos mensaje de error.
@@ -171,6 +197,14 @@ def get_contact():
     try:
         # Consulta para traer todos los contactos registrados.
         contacts = Contact.query.all()
+
+        # Validamos que exista al menos un registro a mostrar.
+        if contacts is None:
+            return jsonify(
+                {
+                    'message': 'Actualmente no hay contactos registrados.'
+                }
+            ), 100
 
     except SQLAlchemyError as e:
         # Retorna mensaje de error.
@@ -236,7 +270,7 @@ def edit_contact(id):
     except SQLAlchemyError as e:
         # Deshacer cambios en caso de error.
         db.session.rollback()
-        
+
         # Retorna mensaje de error.
         return jsonify(
             {
